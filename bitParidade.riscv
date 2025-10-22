@@ -1,0 +1,101 @@
+.data # Início da seção de dados (variáveis globais)
+str_de_paridade:   .string "bit-paridade: " # Define a string para "bit-paridade: "
+str_saida:      .string "saida: " # Define a string para "saida: "
+str_erro:       .string "entrada incorreta" # Define a string para "entrada incorreta"
+str_nova_linha:    .string "\n" # Define a string para o caractere de nova linha
+
+.text
+.globl main 
+
+main: 
+    # --- 1. Ler o número N ---
+    li a7, 5          # Carrega o código da syscall 5 (ler inteiro) no registrador a7
+    ecall             # Executa a chamada de sistema (o inteiro lido fica em a0)
+    mv t0, a0         # Move o número lido (N) de a0 para t0 (para preservar)
+
+    # --- 2. Verificar a condição N < 128 ---
+    li t1, 128        # Carrega o valor imediato 128 no registrador t1
+    bge t0, t1, handle_error  # Se t0 (N) >= t1 (128), desvia para o rótulo 'handle_error'
+
+    # --- 3. N é válido (N < 128). Calcular o bit de paridade ---
+    
+    # Vamos contar os bits '1' em N (t0)
+    mv t2, t0         # Copia N (de t0) para t2 (t2 será modificado no loop)
+    li t1, 0          # Inicializa t1 (contador de bits '1') com 0
+
+count_loop: # Define o rótulo de início do loop de contagem
+    # Se t2 (número atual) for 0, terminamos a contagem
+    beqz t2, end_count_loop # Desvia para 'end_count_loop' se t2 for igual a zero
+    
+    # Pega o bit menos significativo (LSB)
+    andi t3, t2, 1    # t3 = t2 E 1 (isola o último bit, t3 será 0 ou 1)
+    
+    # Adiciona o LSB ao contador
+    add t1, t1, t3    # t1 (contador) = t1 + t3 (soma 0 ou 1 ao contador)
+    
+    # Desloca o número para a direita para verificar o próximo bit
+    srli t2, t2, 1    # Deslocamento lógico de t2 para a direita em 1 bit (t2 = t2 / 2)
+    
+    # Volta ao início do loop
+    j count_loop      # Salta incondicionalmente de volta para 'count_loop'
+
+end_count_loop: # Define o rótulo para o fim do loop de contagem
+    # t1 agora contém o número total de bits '1'
+    
+    # --- 4. Determinar o bit de paridade ---
+    # Queremos paridade PAR.
+    # Se a contagem (t1) é ímpar (LSB=1), o bit de paridade é 1.
+    # Se a contagem (t1) é par (LSB=0), o bit de paridade é 0.
+    
+    andi t4, t1, 1    # t4 = t1 E 1 (calcula o resto da divisão por 2, t4 é o bit de paridade)
+
+    # --- 5. Calcular o valor de saída ---
+    # O bit de paridade é colocado na posição 7 (valor 128)
+    # saida = N + (bit_paridade * 128)
+    
+    li t5, 128        # Carrega o valor 128 (representando 2^7) em t5
+    mul t5, t4, t5    # t5 = t4 (bit paridade) * t5 (128). (t5 será 0 ou 128)
+    add t5, t0, t5    # t5 = t0 (N) + t5 (valor do bit paridade). t5 é o valor final 'saida'
+
+    # --- 6. Imprimir os resultados ---
+    
+    # Imprime "bit-paridade: "
+    la a0, str_de_paridade # Carrega o endereço da string str_paridade em a0
+    li a7, 4          # Carrega o código da syscall 4 (imprimir string) em a7
+    ecall             # Executa a chamada de sistema (imprime a string)
+    
+    # Imprime o bit de paridade (t4)
+    mv a0, t4         # Move o bit de paridade (t4) para a0 (argumento da syscall)
+    li a7, 1          # Carrega o código da syscall 1 (imprimir inteiro) em a7
+    ecall             # Executa a chamada de sistema (imprime o bit)
+    
+    # Imprime nova linha
+    la a0, str_nova_linha # Carrega o endereço da string str_newline em a0
+    li a7, 4              # Carrega o código da syscall 4 (imprimir string) em a7
+    ecall                 # Executa a chamada de sistema (imprime a nova linha)
+    
+    # Imprime "saida: "
+    la a0, str_saida  # Carrega o endereço da string str_saida em a0
+    li a7, 4          # Carrega o código da syscall 4 (imprimir string) em a7
+    ecall             # Executa a chamada de sistema (imprime a string)
+    
+    # Imprime o valor de saída (t5)
+    mv a0, t5         # Move o valor final 'saida' (t5) para a0 (argumento da syscall)
+    li a7, 1          # Carrega o código da syscall 1 (imprimir inteiro) em a7
+    ecall             # Executa a chamada de sistema (imprime o valor 'saida')
+    
+    # Pula para o fim do programa
+    j exit            # Salta incondicionalmente para o rótulo 'exit'
+
+handle_error: # Define o rótulo para o caso de N >= 128
+    # --- Bloco de erro (N >= 128) ---
+    la a0, str_erro   # Carrega o endereço da string str_erro em a0
+    li a7, 4          # Carrega o código da syscall 4 (imprimir string) em a7
+    ecall             # Executa a chamada de sistema (imprime "entrada incorreta")
+    
+
+    
+exit: # Define o rótulo para o fim do programa
+    # --- Fim do programa ---
+    li a7, 10         # Carrega o código da syscall 10 (sair do programa) em a7
+    ecall             # Executa a chamada de sistema (termina o programa)

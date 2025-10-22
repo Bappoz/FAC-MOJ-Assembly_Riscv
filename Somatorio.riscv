@@ -1,0 +1,39 @@
+.data 		     # Determinar variáveis
+novaLinha: 
+	.asciz "\n" # Cria uma string para pular uma linha
+	
+.text               # Seção de código (onde ficam as instruções)
+.globl main         # Torna o rótulo 'main' visível como ponto de entrada
+
+main:
+    # LER O PRIMEIRO NÚMERO
+    li a7, 5          # syscall 5 → Ler inteiro
+    ecall             # Executa a chamada de sistema
+    mv t0, a0        # Copia o valor lido (em a0) para o registrador t0
+
+
+
+    # LER O SEGUNDO NÚMERO
+    li a7, 5         # ler outro inteiro
+    ecall             # Executa a leitura do segundo número
+    mv t1, a0        # Copia o segundo valor lido (em a0) para t1
+
+
+    # SOMA DOS DOIS NÚMEROS
+    add t2, t0, t1   # Soma os valores de t0 e t1
+
+    # IMPRIMIR O RESULTADO
+    mv a0, t2        # Move o resultado (t2) para a0,
+    li a7, 1         # syscall 1 → "Imprimir inteiro"
+    ecall             # Executa a impressão do valor em a0
+    
+    # Imprime newline para garantir quebra de linha final
+    la   a0, novaLinha # Lê a string
+    li   a7, 4	       # Carrega o número da syscall 4 em a7 (significa imprimir string)
+    ecall	       # Executa o syscall
+
+
+    # FINALIZAR O PROGRAMA
+    li a7, 10        # syscall 10 → "Encerrar o programa"
+    ecall             # Executa o encerramento (exit)
+
