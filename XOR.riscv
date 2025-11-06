@@ -1,0 +1,99 @@
+.data
+    str_newline:    .asciz "\n"             # Define a string de nova linha (terminada com null)
+    buffer_entrada: .space 16           # Reserva 16 bytes de espaço para a string de entrada
+
+.text
+.globl main
+
+main:
+    li    a7, 5                     # Carrega o código da syscall 5 (ler inteiro)
+    ecall                         # Executa a syscall (lê N)
+    mv    s0, a0                  # Salva N (de a0) em s0 (será nosso contador de loops)
+
+loop_principal:                     # Rótulo de início do loop principal
+    beqz s0, fim_programa           # Se s0 (contador N) == 0, pula para o fim do programa
+
+    # Leitura da linha (ex: "1 2\n")
+    la    a0, buffer_entrada        # Carrega o endereço do buffer em a0 (argumento 1)
+    li    a1, 16                    # Carrega o tamanho máximo (16 bytes) em a1 (argumento 2)
+    li    a7, 8                     # Carrega o código da syscall 8 (ler string)
+    ecall                         # Executa a syscall (lê a linha)
+
+    # Inicializa os registradores para o processamento (parsing)
+    la    s1, buffer_entrada        # Carrega o endereço base do buffer em s1 (nosso ponteiro)
+    li    s2, 0                     # Zera s2 (onde guardaremos o valor inteiro de X)
+    li    s3, 0                     # Zera s3 (onde guardaremos o valor inteiro de Y)
+
+# Loop para processar (converter) o primeiro número (X)
+loop_parse_x:
+    lb    t0, 0(s1)                 # Carrega 1 byte (caractere) do ponteiro (s1) em t0
+
+    # Verifica se o caractere é um separador
+    li    t1, ' '                   # Carrega o caractere ASCII ' ' (espaço) em t1
+    beq   t0, t1, fim_parse_x       # Se t0 == ' ', pula para o fim do processamento de X
+    li    t1, '\n'                  # Carrega o caractere ASCII '\n' (nova linha) em t1
+    beq   t0, t1, fim_parse_x       # Se t0 == '\n', pula para o fim do processamento de X
+
+    # Converte o caractere ASCII para inteiro
+    addi t0, t0, -48                # Subtrai 48 (ASCII '0') do caractere (ex: '1' (49) -> 1)
+
+    # Adiciona o dígito ao valor total de X (s2)
+    li    t1, 10                    # Carrega 10 em t1 (para multiplicação decimal)
+    mul   s2, s2, t1                # Multiplica o valor atual de X por 10 (ex: 1 -> 10)
+    add   s2, s2, t0                # Adiciona o novo dígito (ex: 10 + 2 = 12)
+
+    # Avança para o próximo caractere
+    addi s1, s1, 1                  # Incrementa o ponteiro (s1)
+    j     loop_parse_x              # Volta ao início do loop de X
+
+fim_parse_x:
+    addi s1, s1, 1                  # Incrementa o ponteiro (s1) para pular o ' ' (espaço)
+
+# Loop para processar (converter) o segundo número (Y)
+loop_parse_y:
+    lb    t0, 0(s1)                 # Carrega 1 byte (caractere) do ponteiro (s1) em t0
+
+    # Verifica se o caractere é um terminador
+    li    t1, '\n'                  # Carrega o caractere ASCII '\n' (nova linha) em t1
+    beq   t0, t1, fim_parse_y       # Se t0 == '\n', pula para o fim do processamento de Y
+    beqz t0, fim_parse_y            # Se t0 == 0 (fim da string, '\0'), pula para o fim de Y
+
+    # Converte o caractere ASCII para inteiro
+    addi t0, t0, -48                # Subtrai 48 (ASCII '0') do caractere
+
+    # Adiciona o dígito ao valor total de Y (s3)
+    li    t1, 10                    # Carrega 10 em t1 (para multiplicação decimal)
+    mul   s3, s3, t1                # Multiplica o valor atual de Y por 10
+    add   s3, s3, t0                # Adiciona o novo dígito
+
+    # Avança para o próximo caractere
+    addi s1, s1, 1                  # Incrementa o ponteiro (s1)
+    j     loop_parse_y              # Volta ao início do loop de Y
+
+fim_parse_y:
+    # Lógica do XOR: Compara os valores X (s2) e Y (s3)
+    beq   s2, s3, caso_igual        # Se s2 == s3, pula para 'caso_igual'
+
+caso_diferente:                     # Rótulo para o caso X != Y (XOR Verdadeiro)
+    li    a0, 2                     # Carrega o resultado 2 (Verdadeiro) em a0
+    j     imprimir_resultado        # Pula para a seção de impressão
+
+caso_igual:                         # Rótulo para o caso X == Y (XOR Falso)
+    li    a0, 1                     # Carrega o resultado 1 (Falso) em a0
+
+imprimir_resultado:                 # Rótulo da seção de impressão
+    li    a7, 1                     # Carrega o código da syscall 1 (imprimir inteiro)
+    ecall                         # Executa a syscall (imprime o valor em a0)
+
+    # Imprime a nova linha
+    la    a0, str_newline           # Carrega o endereço da string de nova linha em a0
+    li    a7, 4                     # Carrega o código da syscall 4 (imprimir string)
+    ecall                         # Executa a syscall (imprime a nova linha)
+
+    # Fim da iteração do loop
+    addi s0, s0, -1               # Decrementa o contador N (s0)
+    j     loop_principal            # Volta ao início do loop principal
+
+fim_programa:                       # Rótulo de fim do programa
+    li    a7, 10                    # Carrega o código da syscall 10 (sair)
+    ecall                         # Executa a syscall (termina o programa)

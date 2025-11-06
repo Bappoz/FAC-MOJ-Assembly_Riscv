@@ -1,0 +1,70 @@
+.data
+msginv: .string "entrada invalida.\n"   # mensagem para entrada inválida
+
+.text
+.globl main
+
+main:
+    li a7, 5          # lê inteiro
+    ecall
+    mv s0, a0         # s0 = n lido
+
+    li t0, 1
+    ble s0, t0, inval # se n <= 1 → inválido
+
+    li t0, 65536
+    bge s0, t0, inval # se n >= 65536 → inválido
+
+    mv s1, s0         # s1 = n para fatorar
+    mv s2, s0         # s2 = phi inicial
+
+    li t0, 2          # t0 = divisor inicial
+
+factloop:
+    mul t1, t0, t0    # t1 = divisor^2
+    bgt t1, s1, endfact   # se divisor^2 > n restante → parar
+
+    rem t1, s1, t0    # resto = n % divisor
+    bnez t1, nextdiv  # se não divide → próximo divisor
+
+    div t1, s2, t0    # t1 = phi/divisor
+    sub s2, s2, t1    # phi = phi - phi/divisor
+
+remove:
+    div t2, s1, t0    # t2 = n/divisor
+    mul t3, t2, t0    # verifica se divisor divide n
+    bne t3, s1, remend
+    mv s1, t2         # remove fator do n
+    j remove          # continua removendo o mesmo divisor
+
+remend:
+    addi t0, t0, 1    # próximo divisor
+    j factloop
+
+nextdiv:
+    addi t0, t0, 1    # tenta divisor seguinte
+    j factloop
+
+endfact:
+    li t0, 1
+    ble s1, t0, printphi   # se sobrou 1 → fim
+
+    div t1, s2, s1         # phi/divisor restante
+    sub s2, s2, t1         # phi = phi - phi/divisor
+
+printphi:
+    mv a0, s2         # imprime phi final
+    li a7, 1
+    ecall
+    li a0, 10         # newline
+    li a7, 11
+    ecall
+    li a7, 10         # exit
+    ecall
+
+inval:
+    la a0, msginv     # imprime mensagem de erro
+    li a7, 4
+    ecall
+    li a7, 10         # exit
+    ecall
