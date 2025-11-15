@@ -1,53 +1,92 @@
 .data
-msg_invalid: .string "Entrada invalida.\n"   # texto para entrada fora do intervalo
-
+handle_error: .asciz "Entrada Invalida."
+newLine: .asciz "\n"
 .text
 .globl main
 
 main:
-    li a7, 5          # lê inteiro
-    ecall
-    mv t0, a0         # guarda N em t0
-
-    li t1, 1          # testa limite inferior
-    ble t0, t1, invalid
-    li t1, 32768      # testa limite superior
-    bge t0, t1, invalid
-
-    li t1, 2          # divisor inicial
-
-factor_loop:
-    bgt t1, t0, end   # acabou se divisor > N
-
-try_divide:
-    rem t2, t0, t1    # verifica se divisor divide N
-    bnez t2, next_div # se resto != 0, tenta outro divisor
-
-    mv a0, t1         # imprime o fator
-    jal ra, print_int
-
-    div t0, t0, t1    # reduz N
-    j try_divide      # tenta dividir novamente pelo mesmo divisor
-
-next_div:
-    addi t1, t1, 1    # próximo divisor
-    j factor_loop
-
-end:
-    li a7, 10         # encerra
-    ecall
-
-print_int:
-    li a7, 1          # syscall: print int
-    ecall
-    li a0, 10         # '\n'
-    li a7, 11         # print char
-    ecall
-    ret
-
-invalid:
-    la a0, msg_invalid  # imprime erro
-    li a7, 4
-    ecall
-    li a7, 10           # encerra
-    ecall
+	li a7, 5
+	ecall
+	mv t0, a0
+	
+	la a0, newLine
+	li a7, 4
+	ecall
+	
+	li t1, 2
+	blt t0, t1, input_error
+	li t1, 32768
+	bge t0, t1, input_error
+	
+	mv t2, t0
+	loop1:
+	     	li t3, 2
+	     	
+		rem t4, t2, t3
+		bnez t4, loop1_out
+		
+		
+		mv a0, t3
+		li a7, 1
+		ecall
+		
+		la a0, newLine
+		li a7, 4
+		ecall
+		
+		srli t2, t2, 1
+		
+		j loop1
+		
+	loop1_out:
+		
+		li t1, 3
+		loop2:
+			mul t3, t1, t1
+			bgt t3, t2, loop2_out
+			
+			while:
+				rem t4, t2, t3
+			    	bnez t4, ext_while
+			    	
+			    	mv a0, t1
+			    	li a7, 1
+			    	ecall
+			    	
+			    	la a0, newLine
+			    	li a7, 4
+			    	ecall
+			    	
+			    	div t2, t2, t1
+			    	
+			 	j while
+			 	
+			ext_while:
+				addi t1, t1, 2
+				j loop2
+				
+				
+				
+		loop2_out:
+			li t3, 1
+			ble t2, t3, end
+			
+			mv a0, t2
+			li a7, 1
+			ecall
+			
+			la a0, newLine
+			li a7, 4
+			ecall
+			
+		end:
+			li a7, 10
+			ecall
+			
+	input_error:
+	la a0, handle_error
+	li a7, 4
+	ecall
+	
+	li a7, 10
+	ecall

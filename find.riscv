@@ -1,0 +1,43 @@
+.data
+str: .asciz "hello world!"
+newline: .asciz "\n"
+
+.text
+.globl main
+
+main:
+	li a7, 12
+	ecall
+	mv a1, a0
+	
+	la a0, newline
+	li a7, 4
+	ecall
+	
+	la a0, str
+	
+	jal ra, char_in_str
+	li a7, 1
+	ecall
+	
+	li a7, 10
+	ecall
+	
+	
+char_in_str:
+while:
+	lb t0, 0(a0)
+	beqz t0, nao_encontrou
+	beq t0, a1, encontrou
+	
+	addi a0, a0, 1
+	j while
+	
+encontrou:
+	li a0, 1
+	ret
+	
+nao_encontrou:
+	
+	li a0, 0
+	ret
