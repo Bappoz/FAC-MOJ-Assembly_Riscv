@@ -1,0 +1,111 @@
+.data
+    const_pi:     .float 3.1415927
+    tolerancia:   .float 0.0000001
+    quebra_linha: .asciz "\n"
+
+.text
+.globl main
+
+main:
+    li a7, 6
+    ecall
+    fmv.s f0, fa0          # f0 = x
+
+    fabs.s f1, f0
+    li t0, 1
+    fcvt.s.w f2, t0        # f2 = 1.0
+    flt.s t1, f1, f2       # t1 = (|x| < 1)
+    bnez t1, caso_pequeno  # se |x| < 1
+
+
+# Caso |x| >= 1
+caso_grande:
+    fmv.s fa0, f0
+    li t0, 0
+    fcvt.s.w f10, t0
+    flt.s t6, f0, f10      # t6 = (x < 0)
+    bnez t6, grande_negativo
+
+grande_positivo:
+    li t0, 1
+    fcvt.s.w f9, t0
+    fdiv.s fa0, f9, f0     # fa0 = 1/x
+    jal ra, calcular_arctan
+    j fim_calculo
+
+grande_negativo:
+    li t0, 1
+    fcvt.s.w f9, t0
+    fdiv.s fa0, f9, f0     # fa0 = 1/x
+    jal ra, calcular_arctan
+    la a0, const_pi
+    flw f3, 0(a0)
+    fadd.s fa0, fa0, f3
+    j fim_calculo
+
+
+# Caso |x| < 1
+caso_pequeno:
+    fmv.s fa0, f0
+    jal ra, calcular_arctan
+    la a0, const_pi
+    flw f3, 0(a0)
+    li t0, 2
+    fcvt.s.w f4, t0
+    fdiv.s f3, f3, f4
+    fsub.s fa0, f3, fa0
+
+
+fim_calculo:
+    li a7, 2
+    ecall
+
+    la a0, quebra_linha
+    li a7, 4
+    ecall
+
+    li a7, 10
+    ecall
+
+
+# função arctan usando série de Taylor
+calcular_arctan:
+    fmv.s f1, fa0
+    fmv.s f2, fa0
+    fmul.s f3, fa0, fa0
+    li t1, 1
+    li t2, 0
+    li t3, 0
+    li t5, 1000
+
+
+loop_taylor:
+    addi t1, t1, 2
+    addi t3, t3, 1
+    bge t3, t5, fim_arctan
+
+    fmul.s f2, f2, f3
+    fcvt.s.w f4, t1
+    fdiv.s f5, f2, f4
+
+    xori t2, t2, 1
+    beqz t2, soma_termo
+    fneg.s f5, f5
+
+soma_termo:
+    fadd.s f6, f1, f5
+    fsub.s f7, f6, f1
+    fabs.s f7, f7
+
+    la a0, tolerancia
+    flw f8, 0(a0)
+    fle.s t4, f7, f8
+    bnez t4, fim_arctan
+
+    fmv.s f1, f6
+    j loop_taylor
+
+
+fim_arctan:
+    fmv.s fa0, f6
+    ret

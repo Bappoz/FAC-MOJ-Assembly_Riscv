@@ -1,0 +1,60 @@
+.data
+entrada_str: .space 33               # Buffer para string de entrada (32 + null)
+tabela_hex:  .string "0123456789abcdef"
+
+.text
+.globl main
+
+main:
+    li a7, 8                    # syscall read_string
+    la a0, entrada_str          # a0 = endereço do buffer
+    li a1, 33                   # a1 = tamanho máximo
+    ecall
+    
+    la t0, entrada_str          # t0 = ponteiro para string
+    la t1, tabela_hex           # t1 = ponteiro para tabela hex
+    
+loop_processamento:
+    # Ler caractere atual
+    lb t2, 0(t0)                # t2 = caractere atual
+    
+    beq t2, zero, fim_programa  # Se '\0', terminar
+    li t3, 10                   # t3 = '\n'
+    beq t2, t3, fim_programa    # Se '\n', terminar
+    li t3, 13                   # t3 = '\r'
+    beq t2, t3, fim_programa    # Se '\r', terminar
+    
+    # Converter byte para dois dígitos hexa
+    # Primeiro nibble (4 bits superiores)
+    srli t3, t2, 4              # t3 = byte >> 4 (nibble superior)
+    andi t3, t3, 0x0F           # Garantir que é apenas 4 bits
+    add t4, t1, t3              # t4 = endereço do dígito hex
+    lb a0, 0(t4)                # a0 = caractere hex
+    
+    # Imprimir primeiro dígito hex
+    li a7, 11                   # syscall print_char
+    ecall
+    
+    # Segundo nibble (4 bits inferiores)
+    andi t3, t2, 0x0F           # t3 = nibble inferior
+    add t4, t1, t3              # t4 = endereço do dígito hex
+    lb a0, 0(t4)                # a0 = caractere hex
+    
+    # Imprimir segundo dígito hex
+    li a7, 11                   # syscall print_char
+    ecall
+    
+    # Avançar para próximo caractere
+    addi t0, t0, 1              # Incrementar ponteiro
+    j loop_processamento
+    
+
+fim_programa:
+    # Imprimir nova linha
+    li a7, 11                   # syscall print_char
+    li a0, 10                   # a0 = '\n'
+    ecall
+    
+    # Sair do programa
+    li a7, 10                   # syscall exit
+    ecall
